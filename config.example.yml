@@ -1,0 +1,8 @@
+IA:
+  url: "https://b--instance.bfg-group.ru"
+  ws_url: "https://e--instance.bfg-group.ru"
+  login: "login"
+  password: "pass"
+
+rules:
+  days-shift: 7
