@@ -115,16 +115,18 @@ def main():
                     'OPERATION_ID': '',
                     'OPERATION_PROGRESS': 100
                 })
-    for code, amount in wip.items():
-        if amount > 0:
-            new_wip.append({
-                'ORDER': '',
-                'BATCH_ID': code,
-                'CODE': code,
-                'AMOUNT': amount,
-                'OPERATION_ID': '',
-                'OPERATION_PROGRESS': 100
-            })
+
+    # Пока убрали все партии из НЗП, которые не пригодятся
+    # for code, amount in wip.items():
+    #     if amount > 0:
+    #         new_wip.append({
+    #             'ORDER': '',
+    #             'BATCH_ID': code,
+    #             'CODE': code,
+    #             'AMOUNT': amount,
+    #             'OPERATION_ID': '',
+    #             'OPERATION_PROGRESS': 100
+    #         })
 
     new_plan = sorted(new_plan, key=itemgetter('PRIORITY'))
     dict2csv(new_wip, 'wip105.csv')
