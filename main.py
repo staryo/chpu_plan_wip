@@ -6,6 +6,7 @@ from logging import basicConfig, DEBUG, INFO
 from operator import itemgetter
 from os import getcwd
 from os.path import join
+from time import strptime
 
 import yaml
 
@@ -50,9 +51,11 @@ def main():
     )
 
     plan = return_plan191(server, args.material)
-    # with open('plan191.csv') as f:
-    #     plan = [{k: v for k, v in row.items()}
-    #             for row in csv.DictReader(f, skipinitialspace=True)]
+    dict2csv(plan, 'plan191.csv')
+
+    with open('plan191.csv') as f:
+        plan = [{k: v for k, v in row.items()}
+                for row in csv.DictReader(f, skipinitialspace=True)]
 
     specifications = return_specifications(config)
     entities = get_entities(config)
@@ -67,7 +70,7 @@ def main():
         if entity not in specifications:
             continue
         for child in specifications[entity]:
-            how_many = wip[child] / specifications[entity][child]
+            how_many = min(wip[child] / specifications[entity][child], how_many)
         if how_many > 0:
             order_name = f"[{date_to_week(row['ORDER'])}]{entities[row['CODE']]}_OK"
             if how_many < float(row['AMOUNT']):
@@ -76,9 +79,17 @@ def main():
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': how_many,
-                'DATE_FROM': datetime.now().strftime('%Y-%m-%d 07:00'),
+                'DATE_FROM': (
+                        max(
+                            datetime.strptime(
+                                row['DATE_TO'], '%Y-%m-%d %H:%M'
+                            ) - timedelta(days=21),
+                            datetime.now()
+                        )
+                ).strftime('%Y-%m-%d 07:00'),
+                # 'DATE_FROM': datetime.now().strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{datetime.now().strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
+                'PRIORITY': f"{(datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') - timedelta(days=21)).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
             })
             for child in specifications[entity]:
                 new_wip.append({
@@ -99,11 +110,16 @@ def main():
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': float(row['AMOUNT']) - how_many,
+                # 'DATE_FROM': (
+                #         datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') -
+                #         timedelta(days=21)
+                # ).strftime('%Y-%m-%d 07:00'),
                 'DATE_FROM': (
                         datetime.now() + timedelta(days=config['rules']['days-shift'])
                 ).strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{(datetime.now() + timedelta(days=config['rules']['days-shift'])).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
+                'PRIORITY': f"{(datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') + timedelta(days=config['rules']['days-shift'])).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
+                # 'PRIORITY': f"{(datetime.now() + timedelta(days=config['rules']['days-shift'])).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
                 # 'NAME': entities[row['CODE']]
             })
             for child in specifications[entity]:
