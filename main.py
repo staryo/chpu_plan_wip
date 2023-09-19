@@ -1,6 +1,7 @@
 import argparse
 import csv
 from argparse import ArgumentParser
+from collections import defaultdict
 from datetime import datetime, timedelta
 from logging import basicConfig, DEBUG, INFO
 from operator import itemgetter
@@ -49,9 +50,18 @@ def main():
         level=args.debug and DEBUG or INFO,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    with open(config['wipca'], 'r', encoding='utf-8') as input_file:
+        wipca = list(csv.DictReader(
+            input_file
+        ))
+    wipca.sort(key=lambda x: x['#NOP'], reverse=True)
+    wip_ca_dict = defaultdict(lambda: defaultdict(float))
 
-    plan = return_plan191(server, args.material)
-    dict2csv(plan, 'plan191.csv')
+    for row in wipca:
+        wip_ca_dict[row['#ROUTE_PHASE']][row['OPERATION_ID']] += float(row['AMOUNT'])
+
+#    plan = return_plan191(server, args.material)
+#    dict2csv(plan, 'plan191.csv')
 
     with open('plan191.csv') as f:
         plan = [{k: v for k, v in row.items()}
@@ -64,6 +74,7 @@ def main():
 
     new_plan = []
     new_wip = []
+
     for row in plan:
         entity = row['CODE']
         how_many = float(row['AMOUNT'])
@@ -92,13 +103,21 @@ def main():
                 'PRIORITY': f"{(datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') - timedelta(days=21)).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
             })
             for child in specifications[entity]:
+                if '-' in entity:
+                    routephase = f"{entity}_Z{entity[13]}01"
+                else:
+                    routephase = f"{entity}_Z{child[13]}01"
+                if routephase in wip_ca_dict:
+                    a=1
+
                 new_wip.append({
                     'ORDER': order_name,
                     'BATCH_ID': f"{order_name}_{child}",
                     'CODE': child,
                     'AMOUNT': how_many * specifications[entity][child],
                     'OPERATION_ID': '',
-                    'OPERATION_PROGRESS': 100
+                    'OPERATION_PROGRESS': 100,
+                    '#PARENT_CODE': row['CODE']
                 })
                 wip[child] -= how_many * specifications[entity][child]
         if float(row['AMOUNT']) - how_many > 0:
@@ -129,7 +148,8 @@ def main():
                     'CODE': child,
                     'AMOUNT': (float(row['AMOUNT']) - how_many) * specifications[entity][child],
                     'OPERATION_ID': '',
-                    'OPERATION_PROGRESS': 100
+                    'OPERATION_PROGRESS': 100,
+                    '#PARENT_CODE': row['CODE']
                 })
 
     # Пока убрали все партии из НЗП, которые не пригодятся

@@ -45,6 +45,19 @@ def get_entities(config):
 
         return entity_report
 
+def get_entities(config):
+
+    with IARest.from_config(config['IA']) as ia:
+        entities = ia.get_from_rest_collection(
+            'entity'
+        )
+
+        entity_report = {}
+
+        for row in entities:
+            entity_report[row['identity']] = row['name']
+
+        return entity_report
 
 if __name__ == '__main__':
     parser = ArgumentParser(
