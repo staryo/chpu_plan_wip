@@ -115,7 +115,12 @@ def main():
                 #         timedelta(days=21)
                 # ).strftime('%Y-%m-%d 07:00'),
                 'DATE_FROM': (
-                        datetime.now() + timedelta(days=config['rules']['days-shift'])
+                    max(
+                        datetime.now() + timedelta(days=config['rules']['days-shift']),
+                        datetime.strptime(
+                            row['DATE_TO'], '%Y-%m-%d %H:%M'
+                        ) - timedelta(days=21),
+                    )
                 ).strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
                 'PRIORITY': f"{(datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') + timedelta(days=config['rules']['days-shift'])).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
