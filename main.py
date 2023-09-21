@@ -75,8 +75,8 @@ def main():
                 f"{row['OPERATION_ID']}|{row['OPERATION_PROGRESS']}"
             ] += float(row['AMOUNT'])
 
-    # plan = return_plan191(server, args.material)
-    # dict2csv(plan, 'plan191.csv')
+    plan = return_plan191(server, args.material)
+    dict2csv(plan, 'plan191.csv')
 
     with open('plan191.csv') as f:
         plan = [{k: v for k, v in row.items()}
@@ -85,11 +85,11 @@ def main():
     specifications = return_specifications(config)
     entities = get_entities(config)
 
-    # wip = return_wip(server)
-    # dict2csv(
-    #     [{'CODE': key, 'AMOUNT': value} for key, value in wip.items()],
-    #     'wip_sap.csv'
-    # )
+    wip = return_wip(server)
+    dict2csv(
+        [{'CODE': key, 'AMOUNT': value} for key, value in wip.items()],
+        'wip_sap.csv'
+    )
     with open('wip_sap.csv') as f:
         wip_list = [{k: v for k, v in row.items()}
                     for row in csv.DictReader(f, skipinitialspace=True)]
