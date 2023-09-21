@@ -59,9 +59,6 @@ def main():
         wip_ca_dict[row['#ROUTE_PHASE']][row['OPERATION_ID']] += float(
             row['AMOUNT'])
 
-    #    plan = return_plan191(server, args.material)
-    #    dict2csv(plan, 'plan191.csv')
-
     with open('plan191.csv') as f:
         plan = [{k: v for k, v in row.items()}
                 for row in csv.DictReader(f, skipinitialspace=True)]
@@ -70,10 +67,14 @@ def main():
     entities = get_entities(config)
 
     wip = return_wip(server)
-    dict2csv(wip, 'wip_sap.csv')
+    dict2csv(
+        [{'CODE': key, 'AMOUNT': value } for key,value in wip.items()],
+        'wip_sap.csv'
+    )
     with open('wip_sap.csv') as f:
-        plan = [{k: v for k, v in row.items()}
+        wip_list = [{k: v for k, v in row.items()}
                 for row in csv.DictReader(f, skipinitialspace=True)]
+    wip = {row['CODE']: row['AMOUNT'] for row in wip_list}
 
     new_plan = []
     new_wip = []
@@ -110,25 +111,25 @@ def main():
             })
             for child in specifications[entity]:
                 if '-' in entity:
-                    routephase = f"{entity}_Z{entity[13]}01"
+                    route_phase = f"{entity}_Z{entity[13]}01"
                 else:
-                    routephase = f"{entity}_Z{child[13]}01"
-                if routephase in wip_ca_dict:
-                    a = 1
-
-                new_wip.append({
-                    'ORDER': order_name,
-                    'BATCH_ID': f"{order_name}_{child}",
-                    'CODE': child,
-                    'AMOUNT': how_many * specifications[entity][child],
-                    'OPERATION_ID': '',
-                    'OPERATION_PROGRESS': 100,
-                    '#PARENT_CODE': row['CODE']
-                })
+                    route_phase = f"{entity}_Z{child[13]}01"
                 wip[child] -= how_many * specifications[entity][child]
+                if route_phase not in wip_ca_dict:
+                    new_wip.append({
+                        'ORDER': order_name,
+                        'BATCH_ID': f"{order_name}_{child}",
+                        'CODE': child,
+                        'AMOUNT': how_many * specifications[entity][child],
+                        'OPERATION_ID': '',
+                        'OPERATION_PROGRESS': 100,
+                        '#PARENT_CODE': row['CODE']
+                    })
+                    continue
+                for operation, amount in wip_ca_dict[route_phase].items():
+                    pass
         if float(row['AMOUNT']) - how_many > 0:
             order_name = f"[{date_to_week(row['ORDER'])}]{entities[row['CODE']]}_NOK"
-            # order_name = f"[{row['ORDER']}]{row['CODE']}_NOK"
             if how_many > 0:
                 order_name += '_D'
 
