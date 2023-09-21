@@ -75,8 +75,8 @@ def main():
                 f"{row['OPERATION_ID']}|{row['OPERATION_PROGRESS']}"
             ] += float(row['AMOUNT'])
 
-    plan = return_plan191(server, args.material)
-    dict2csv(plan, 'plan191.csv')
+    # plan = return_plan191(server, args.material)
+    # dict2csv(plan, 'plan191.csv')
 
     with open('plan191.csv') as f:
         plan = [{k: v for k, v in row.items()}
@@ -85,11 +85,11 @@ def main():
     specifications = return_specifications(config)
     entities = get_entities(config)
 
-    wip = return_wip(server)
-    dict2csv(
-        [{'CODE': key, 'AMOUNT': value} for key, value in wip.items()],
-        'wip_sap.csv'
-    )
+    # wip = return_wip(server)
+    # dict2csv(
+    #     [{'CODE': key, 'AMOUNT': value} for key, value in wip.items()],
+    #     'wip_sap.csv'
+    # )
     with open('wip_sap.csv') as f:
         wip_list = [{k: v for k, v in row.items()}
                     for row in csv.DictReader(f, skipinitialspace=True)]
@@ -108,7 +108,8 @@ def main():
             how_many = min(wip[child] / specifications[entity][child],
                            how_many)
         if how_many > 0:
-            order_name = f"[{date_to_week(row['ORDER'])}]{entities[row['CODE']]}_OK"
+            order_name = (f"[{date_to_week(row['ORDER'])}]"
+                          f"{entities[row['CODE']]}_OK")
             if how_many < float(row['AMOUNT']):
                 order_name += '_D'
             date_to_with_shift = (
@@ -133,21 +134,36 @@ def main():
                 'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
             })
 
+            route_phase = None
             if '-' in entity:
                 route_phase = f"{entity}_Z{entity[13]}01"
             else:
-                route_phase = f"{entity}_Z{specifications[entity][0][13]}01"
+                for child in specifications[entity]:
+                    if '-' in child:
+                        route_phase = f"{entity}_Z{child[13]}01"
+                        break
+
+            if route_phase is None:
+                print('Не найден маршрут для', entity)
 
             need_amount = how_many
             if route_phase in wip_ca_dict:
                 print("Нашли", route_phase, ". Всего надо", how_many)
                 for operation, amount in wip_ca_dict[route_phase].items():
                     amount_to_take = min(need_amount, amount)
-                    need_amount -= amount_to_take
+                    if amount_to_take < 0:
+                        print("Остаток меньше нуля",
+                              operation,
+                              amount,
+                              need_amount)
                     operation_progress = float(operation.split('|')[1])
                     if amount_to_take > 0:
+                        need_amount -= amount_to_take
                         print("Взяли", operation, amount_to_take)
                         wip_ca_dict[route_phase][operation] -= amount_to_take
+                        print("Осталось",
+                              operation,
+                              wip_ca_dict[route_phase][operation])
                         new_wip.append({
                             'ORDER': order_name,
                             'BATCH_ID': f"{order_name}_{operation}",
@@ -175,7 +191,8 @@ def main():
                     })
 
         if float(row['AMOUNT']) - how_many > 0:
-            order_name = f"[{date_to_week(row['ORDER'])}]{entities[row['CODE']]}_NOK"
+            order_name = (f"[{date_to_week(row['ORDER'])}]"
+                          f"{entities[row['CODE']]}_NOK")
             if how_many > 0:
                 order_name += '_D'
 
