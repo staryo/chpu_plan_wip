@@ -91,23 +91,26 @@ def main():
             order_name = f"[{date_to_week(row['ORDER'])}]{entities[row['CODE']]}_OK"
             if how_many < float(row['AMOUNT']):
                 order_name += '_D'
-            date_to_with_shift = datetime.strptime(
-                row['DATE_TO'],
-                '%Y-%m-%d %H:%M'
-            ) - timedelta(days=21)
+            date_to_with_shift = (
+                    datetime.strptime(
+                        row['DATE_TO'],
+                        '%Y-%m-%d %H:%M'
+                    ) - timedelta(days=21)
+                ).strftime('%Y-%m-%d 07:00')
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': how_many,
                 'DATE_FROM': (
                     max(
-                        date_to_with_shift,
+                        datetime.strptime(
+                            row['DATE_TO'], '%Y-%m-%d %H:%M'
+                        ) - timedelta(days=21),
                         datetime.now()
                     )
                 ).strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{date_to_with_shift.strftime('%Y-%m-%d 07:00')}"
-                            f"_{row['DATE_TO']}"
+                'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
             })
             for child in specifications[entity]:
                 if '-' in entity:
@@ -182,7 +185,6 @@ def main():
     new_plan = sorted(new_plan, key=itemgetter('PRIORITY'))
     dict2csv(new_wip, 'wip105.csv')
     dict2csv(new_plan, 'plan105.csv')
-
 
 if __name__ == '__main__':
     main()
