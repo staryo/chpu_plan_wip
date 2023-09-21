@@ -7,12 +7,10 @@ from logging import basicConfig, DEBUG, INFO
 from operator import itemgetter
 from os import getcwd
 from os.path import join
-from time import strptime
 
 import yaml
 
 from get_spec import return_specifications, get_entities
-from plan191 import return_plan191
 from utils.date_to_week import date_to_week
 from utils.listofdicts_to_csv import dict2csv
 from wip import return_wip
@@ -58,10 +56,11 @@ def main():
     wip_ca_dict = defaultdict(lambda: defaultdict(float))
 
     for row in wipca:
-        wip_ca_dict[row['#ROUTE_PHASE']][row['OPERATION_ID']] += float(row['AMOUNT'])
+        wip_ca_dict[row['#ROUTE_PHASE']][row['OPERATION_ID']] += float(
+            row['AMOUNT'])
 
-#    plan = return_plan191(server, args.material)
-#    dict2csv(plan, 'plan191.csv')
+    #    plan = return_plan191(server, args.material)
+    #    dict2csv(plan, 'plan191.csv')
 
     with open('plan191.csv') as f:
         plan = [{k: v for k, v in row.items()}
@@ -71,6 +70,10 @@ def main():
     entities = get_entities(config)
 
     wip = return_wip(server)
+    dict2csv(wip, 'wip_sap.csv')
+    with open('wip_sap.csv') as f:
+        plan = [{k: v for k, v in row.items()}
+                for row in csv.DictReader(f, skipinitialspace=True)]
 
     new_plan = []
     new_wip = []
@@ -81,26 +84,32 @@ def main():
         if entity not in specifications:
             continue
         for child in specifications[entity]:
-            how_many = min(wip[child] / specifications[entity][child], how_many)
+            how_many = min(wip[child] / specifications[entity][child],
+                           how_many)
         if how_many > 0:
             order_name = f"[{date_to_week(row['ORDER'])}]{entities[row['CODE']]}_OK"
             if how_many < float(row['AMOUNT']):
                 order_name += '_D'
+            date_to_with_shift = (
+                    datetime.strptime(
+                        row['DATE_TO'],
+                        '%Y-%m-%d %H:%M'
+                    ) - timedelta(days=21)
+                ).strftime('%Y-%m-%d 07:00')
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': how_many,
                 'DATE_FROM': (
-                        max(
-                            datetime.strptime(
-                                row['DATE_TO'], '%Y-%m-%d %H:%M'
-                            ) - timedelta(days=21),
-                            datetime.now()
-                        )
+                    max(
+                        datetime.strptime(
+                            row['DATE_TO'], '%Y-%m-%d %H:%M'
+                        ) - timedelta(days=21),
+                        datetime.now()
+                    )
                 ).strftime('%Y-%m-%d 07:00'),
-                # 'DATE_FROM': datetime.now().strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{(datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') - timedelta(days=21)).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
+                'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
             })
             for child in specifications[entity]:
                 if '-' in entity:
@@ -108,7 +117,7 @@ def main():
                 else:
                     routephase = f"{entity}_Z{child[13]}01"
                 if routephase in wip_ca_dict:
-                    a=1
+                    a = 1
 
                 new_wip.append({
                     'ORDER': order_name,
@@ -125,44 +134,38 @@ def main():
             # order_name = f"[{row['ORDER']}]{row['CODE']}_NOK"
             if how_many > 0:
                 order_name += '_D'
+
+            date_to_with_shift = (
+                    datetime.strptime(
+                        row['DATE_TO'],
+                        '%Y-%m-%d %H:%M'
+                    ) + timedelta(days=config['rules']['days-shift'])
+                ).strftime('%Y-%m-%d 07:00')
+
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': float(row['AMOUNT']) - how_many,
-                # 'DATE_FROM': (
-                #         datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') -
-                #         timedelta(days=21)
-                # ).strftime('%Y-%m-%d 07:00'),
                 'DATE_FROM': (
-                        datetime.now() + timedelta(days=config['rules']['days-shift'])
+                        datetime.now() + timedelta(
+                            days=config['rules']['days-shift']
+                        )
                 ).strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{(datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') + timedelta(days=config['rules']['days-shift'])).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
-                # 'PRIORITY': f"{(datetime.now() + timedelta(days=config['rules']['days-shift'])).strftime('%Y-%m-%d 07:00')}_{row['DATE_TO']}"
-                # 'NAME': entities[row['CODE']]
+                'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
             })
             for child in specifications[entity]:
                 new_wip.append({
                     'ORDER': order_name,
                     'BATCH_ID': f"{order_name}_{child}",
                     'CODE': child,
-                    'AMOUNT': (float(row['AMOUNT']) - how_many) * specifications[entity][child],
+                    'AMOUNT': (
+                                  float(row['AMOUNT']) - how_many
+                              ) * specifications[entity][child],
                     'OPERATION_ID': '',
                     'OPERATION_PROGRESS': 100,
                     '#PARENT_CODE': row['CODE']
                 })
-
-    # Пока убрали все партии из НЗП, которые не пригодятся
-    # for code, amount in wip.items():
-    #     if amount > 0:
-    #         new_wip.append({
-    #             'ORDER': '',
-    #             'BATCH_ID': code,
-    #             'CODE': code,
-    #             'AMOUNT': amount,
-    #             'OPERATION_ID': '',
-    #             'OPERATION_PROGRESS': 100
-    #         })
 
     new_plan = sorted(new_plan, key=itemgetter('PRIORITY'))
     dict2csv(new_wip, 'wip105.csv')
