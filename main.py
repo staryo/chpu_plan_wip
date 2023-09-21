@@ -8,7 +8,6 @@ from operator import itemgetter
 from os import getcwd
 from os.path import join
 
-
 import yaml
 
 from get_spec import return_specifications, get_entities
@@ -66,7 +65,7 @@ def main():
                 float(row['AMOUNT']) * float(row['OPERATION_PROGRESS'])
             )
             wip_ca_dict[row['#ROUTE_PHASE']][
-                f"{row['OPERATION_ID']}|100.0"] += done
+                f"{row['OPERATION_ID']}|100.0"] +=  done
             wip_ca_dict[row['#ROUTE_PHASE']][
                 f"{row['OPERATION_ID']}|0.0"] += float(row['AMOUNT']) - done
         else:
@@ -164,8 +163,8 @@ def main():
                         wip_ca_dict[route_phase][operation] -= amount_to_take
                         new_wip.append({
                             'ORDER': order_name,
-                            'BATCH_ID': f"{order_name}_{child}",
-                            'CODE': child,
+                            'BATCH_ID': f"{order_name}_{operation}",
+                            'CODE': entity,
                             'AMOUNT': amount_to_take,
                             'OPERATION_ID': operation.split('|')[0],
                             'OPERATION_PROGRESS': operation_progress,
