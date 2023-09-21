@@ -54,18 +54,27 @@ def main():
         wipca = list(csv.DictReader(
             input_file
         ))
-    wipca.sort(key=lambda x: (x['#NOP'], float(x['OPERATION_PROGRESS'])), reverse=True)
+    wipca.sort(
+        key=lambda x: (x['#NOP'], float(x['OPERATION_PROGRESS'])),
+        reverse=True
+    )
     wip_ca_dict = defaultdict(lambda: defaultdict(float))
 
     for row in wipca:
         if 0 < float(row['OPERATION_PROGRESS']) < 100:
+            done = round(
+                float(row['AMOUNT']) * float(row['OPERATION_PROGRESS'])
+            )
             wip_ca_dict[row['#ROUTE_PHASE']][
-                f"{row['OPERATION_ID']}|100.0"] += float(row['AMOUNT']) * float(row['OPERATION_PROGRESS'])
+                f"{row['OPERATION_ID']}|100.0"] += done
             wip_ca_dict[row['#ROUTE_PHASE']][
-                f"{row['OPERATION_ID']}|0.0"] += float(row['AMOUNT']) * (1 - float(row['OPERATION_PROGRESS']))
+                f"{row['OPERATION_ID']}|0.0"] += float(row['AMOUNT']) - done
         else:
-            wip_ca_dict[row['#ROUTE_PHASE']][f"{row['OPERATION_ID']}|{row['OPERATION_PROGRESS']}"] += float(
-                row['AMOUNT'])
+            wip_ca_dict[
+                row['#ROUTE_PHASE']
+            ][
+                f"{row['OPERATION_ID']}|{row['OPERATION_PROGRESS']}"
+            ] += float(row['AMOUNT'])
 
     plan = return_plan191(server, args.material)
     dict2csv(plan, 'plan191.csv')
