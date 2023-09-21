@@ -62,10 +62,10 @@ def main():
     for row in wipca:
         if 0 < float(row['OPERATION_PROGRESS']) < 100:
             done = round(
-                float(row['AMOUNT']) * float(row['OPERATION_PROGRESS'])
+                float(row['AMOUNT']) * float(row['OPERATION_PROGRESS']) / 100
             )
             wip_ca_dict[row['#ROUTE_PHASE']][
-                f"{row['OPERATION_ID']}|100.0"] +=  done
+                f"{row['OPERATION_ID']}|100.0"] += done
             wip_ca_dict[row['#ROUTE_PHASE']][
                 f"{row['OPERATION_ID']}|0.0"] += float(row['AMOUNT']) - done
         else:
@@ -160,7 +160,8 @@ def main():
                     if amount_to_take > 0:
                         need_amount -= amount_to_take
                         print("Взяли", operation, amount_to_take)
-                        wip_ca_dict[route_phase][operation] -= amount_to_take
+                        print("Было на складе", wip_ca_dict[route_phase][operation])
+                        wip_ca_dict[route_phase][operation] = amount - amount_to_take
                         print("Осталось",
                               operation,
                               wip_ca_dict[route_phase][operation])
