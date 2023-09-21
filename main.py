@@ -185,7 +185,10 @@ def main():
                         'ORDER': order_name,
                         'BATCH_ID': f"{order_name}_{child}",
                         'CODE': child,
-                        'AMOUNT': need_amount * specifications[entity][child],
+                        'AMOUNT': round(
+                            need_amount * specifications[entity][child],
+                            4
+                        ),
                         'OPERATION_ID': '',
                         'OPERATION_PROGRESS': 100,
                         '#PARENT_CODE': row['CODE']
