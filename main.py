@@ -11,6 +11,7 @@ from os.path import join
 import yaml
 
 from get_spec import return_specifications, get_entities
+from plan191 import return_plan191
 from utils.date_to_week import date_to_week
 from utils.listofdicts_to_csv import dict2csv
 from wip import return_wip
@@ -52,12 +53,15 @@ def main():
         wipca = list(csv.DictReader(
             input_file
         ))
-    wipca.sort(key=lambda x: x['#NOP'], reverse=True)
+    wipca.sort(key=lambda x: (x['#NOP'], float(x['OPERATION_PROGRESS'])), reverse=True)
     wip_ca_dict = defaultdict(lambda: defaultdict(float))
 
     for row in wipca:
-        wip_ca_dict[row['#ROUTE_PHASE']][row['OPERATION_ID']] += float(
+        wip_ca_dict[row['#ROUTE_PHASE']][f"{row['OPERATION_ID']}|{row['OPERATION_PROGRESS']}"] += float(
             row['AMOUNT'])
+
+    plan = return_plan191(server, args.material)
+    dict2csv(plan, 'plan191.csv')
 
     with open('plan191.csv') as f:
         plan = [{k: v for k, v in row.items()}
@@ -74,11 +78,12 @@ def main():
     with open('wip_sap.csv') as f:
         wip_list = [{k: v for k, v in row.items()}
                     for row in csv.DictReader(f, skipinitialspace=True)]
-    wip = {row['CODE']: row['AMOUNT'] for row in wip_list}
+    wip = defaultdict(float)
+    for row in wip_list:
+        wip[row['CODE']] = float(row['AMOUNT'])
 
     new_plan = []
     new_wip = []
-
     for row in plan:
         entity = row['CODE']
         how_many = float(row['AMOUNT'])
@@ -119,7 +124,9 @@ def main():
                     route_phase = f"{entity}_Z{child[13]}01"
                 need_amount = how_many * specifications[entity][child]
                 wip[child] -= need_amount
+
                 if route_phase not in wip_ca_dict:
+                    # print("Не нашлось", route_phase)
                     new_wip.append({
                         'ORDER': order_name,
                         'BATCH_ID': f"{order_name}_{child}",
@@ -131,19 +138,34 @@ def main():
                     })
                     continue
 
+                print("Нашлось", route_phase)
                 for operation, amount in wip_ca_dict[route_phase].items():
                     amount_to_take = min(need_amount, amount)
+                    need_amount -= amount_to_take
                     if amount_to_take > 0:
+                        print("Взяли", operation, amount_to_take)
                         wip_ca_dict[route_phase][operation] -= amount_to_take
                         new_wip.append({
                             'ORDER': order_name,
                             'BATCH_ID': f"{order_name}_{child}",
                             'CODE': child,
                             'AMOUNT': amount_to_take,
-                            'OPERATION_ID': operation,
-                            'OPERATION_PROGRESS': 100,
+                            'OPERATION_ID': operation.split('|')[0],
+                            'OPERATION_PROGRESS': float(operation.split('|')[1]),
                             '#PARENT_CODE': row['CODE']
                         })
+                print("Не хватило", need_amount)
+                print()
+                if need_amount > 0:
+                    new_wip.append({
+                        'ORDER': order_name,
+                        'BATCH_ID': f"{order_name}_{child}",
+                        'CODE': child,
+                        'AMOUNT': need_amount,
+                        'OPERATION_ID': '',
+                        'OPERATION_PROGRESS': 100,
+                        '#PARENT_CODE': row['CODE']
+                    })
 
         if float(row['AMOUNT']) - how_many > 0:
             order_name = f"[{date_to_week(row['ORDER'])}]{entities[row['CODE']]}_NOK"
@@ -161,11 +183,7 @@ def main():
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': float(row['AMOUNT']) - how_many,
-                'DATE_FROM': (
-                        datetime.now() + timedelta(
-                    days=config['rules']['days-shift']
-                )
-                ).strftime('%Y-%m-%d 07:00'),
+                'DATE_FROM': date_to_with_shift,
                 'DATE_TO': row['DATE_TO'],
                 'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
             })
@@ -185,6 +203,7 @@ def main():
     new_plan = sorted(new_plan, key=itemgetter('PRIORITY'))
     dict2csv(new_wip, 'wip105.csv')
     dict2csv(new_plan, 'plan105.csv')
+
 
 if __name__ == '__main__':
     main()
