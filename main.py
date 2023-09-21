@@ -68,12 +68,12 @@ def main():
 
     wip = return_wip(server)
     dict2csv(
-        [{'CODE': key, 'AMOUNT': value } for key,value in wip.items()],
+        [{'CODE': key, 'AMOUNT': value} for key, value in wip.items()],
         'wip_sap.csv'
     )
     with open('wip_sap.csv') as f:
         wip_list = [{k: v for k, v in row.items()}
-                for row in csv.DictReader(f, skipinitialspace=True)]
+                    for row in csv.DictReader(f, skipinitialspace=True)]
     wip = {row['CODE']: row['AMOUNT'] for row in wip_list}
 
     new_plan = []
@@ -114,20 +114,34 @@ def main():
                     route_phase = f"{entity}_Z{entity[13]}01"
                 else:
                     route_phase = f"{entity}_Z{child[13]}01"
-                wip[child] -= how_many * specifications[entity][child]
+                need_amount = how_many * specifications[entity][child]
+                wip[child] -= need_amount
                 if route_phase not in wip_ca_dict:
                     new_wip.append({
                         'ORDER': order_name,
                         'BATCH_ID': f"{order_name}_{child}",
                         'CODE': child,
-                        'AMOUNT': how_many * specifications[entity][child],
+                        'AMOUNT': need_amount,
                         'OPERATION_ID': '',
                         'OPERATION_PROGRESS': 100,
                         '#PARENT_CODE': row['CODE']
                     })
                     continue
+
                 for operation, amount in wip_ca_dict[route_phase].items():
-                    pass
+                    amount_to_take = min(need_amount, amount)
+                    if amount_to_take > 0:
+                        wip_ca_dict[route_phase][operation] -= amount_to_take
+                        new_wip.append({
+                            'ORDER': order_name,
+                            'BATCH_ID': f"{order_name}_{child}",
+                            'CODE': child,
+                            'AMOUNT': amount_to_take,
+                            'OPERATION_ID': operation,
+                            'OPERATION_PROGRESS': 100,
+                            '#PARENT_CODE': row['CODE']
+                        })
+
         if float(row['AMOUNT']) - how_many > 0:
             order_name = f"[{date_to_week(row['ORDER'])}]{entities[row['CODE']]}_NOK"
             if how_many > 0:
@@ -138,7 +152,7 @@ def main():
                         row['DATE_TO'],
                         '%Y-%m-%d %H:%M'
                     ) + timedelta(days=config['rules']['days-shift'])
-                ).strftime('%Y-%m-%d 07:00')
+            ).strftime('%Y-%m-%d 07:00')
 
             new_plan.append({
                 'ORDER': order_name,
@@ -146,8 +160,8 @@ def main():
                 'AMOUNT': float(row['AMOUNT']) - how_many,
                 'DATE_FROM': (
                         datetime.now() + timedelta(
-                            days=config['rules']['days-shift']
-                        )
+                    days=config['rules']['days-shift']
+                )
                 ).strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
                 'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
@@ -158,7 +172,7 @@ def main():
                     'BATCH_ID': f"{order_name}_{child}",
                     'CODE': child,
                     'AMOUNT': (
-                                  float(row['AMOUNT']) - how_many
+                                      float(row['AMOUNT']) - how_many
                               ) * specifications[entity][child],
                     'OPERATION_ID': '',
                     'OPERATION_PROGRESS': 100,
