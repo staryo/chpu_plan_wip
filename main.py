@@ -140,7 +140,7 @@ def main():
 
             need_amount = how_many
             if route_phase in wip_ca_dict:
-                print("Нашли", route_phase)
+                print("Нашли", route_phase, ". Всего надо", how_many)
                 for operation, amount in wip_ca_dict[route_phase].items():
                     amount_to_take = min(need_amount, amount)
                     need_amount -= amount_to_take
@@ -200,7 +200,7 @@ def main():
                     'BATCH_ID': f"{order_name}_{child}",
                     'CODE': child,
                     'AMOUNT': (
-                                      float(row['AMOUNT']) - how_many
+                                  float(row['AMOUNT']) - how_many
                               ) * specifications[entity][child],
                     'OPERATION_ID': '',
                     'OPERATION_PROGRESS': 100,
