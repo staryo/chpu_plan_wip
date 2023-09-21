@@ -1,5 +1,6 @@
 import argparse
 import csv
+import math
 from argparse import ArgumentParser
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -105,8 +106,10 @@ def main():
         if entity not in specifications:
             continue
         for child in specifications[entity]:
-            how_many = min(wip[child] / specifications[entity][child],
-                           how_many)
+            how_many = min(
+                math.floor(wip[child] / specifications[entity][child]),
+                how_many
+            )
         if how_many > 0:
             order_name = (f"[{date_to_week(row['ORDER'])}]"
                           f"{entities[row['CODE']]}_OK")
@@ -117,7 +120,7 @@ def main():
                         row['DATE_TO'],
                         '%Y-%m-%d %H:%M'
                     ) - timedelta(days=21)
-                ).strftime('%Y-%m-%d 07:00')
+            ).strftime('%Y-%m-%d 07:00')
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
@@ -160,8 +163,10 @@ def main():
                     if amount_to_take > 0:
                         need_amount -= amount_to_take
                         print("Взяли", operation, amount_to_take)
-                        print("Было на складе", wip_ca_dict[route_phase][operation])
-                        wip_ca_dict[route_phase][operation] = amount - amount_to_take
+                        print("Было на складе",
+                              wip_ca_dict[route_phase][operation])
+                        wip_ca_dict[route_phase][
+                            operation] = amount - amount_to_take
                         print("Осталось",
                               operation,
                               wip_ca_dict[route_phase][operation])
@@ -221,8 +226,8 @@ def main():
                     'BATCH_ID': f"{order_name}_{child}",
                     'CODE': child,
                     'AMOUNT': round((
-                        float(row['AMOUNT']) - how_many
-                    ) * specifications[entity][child], 4),
+                                            float(row['AMOUNT']) - how_many
+                                    ) * specifications[entity][child], 4),
                     'OPERATION_ID': '',
                     'OPERATION_PROGRESS': 100,
                     '#PARENT_CODE': row['CODE']
