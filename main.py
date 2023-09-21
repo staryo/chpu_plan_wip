@@ -8,6 +8,7 @@ from operator import itemgetter
 from os import getcwd
 from os.path import join
 
+
 import yaml
 
 from get_spec import return_specifications, get_entities
