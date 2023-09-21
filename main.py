@@ -58,8 +58,14 @@ def main():
     wip_ca_dict = defaultdict(lambda: defaultdict(float))
 
     for row in wipca:
-        wip_ca_dict[row['#ROUTE_PHASE']][f"{row['OPERATION_ID']}|{row['OPERATION_PROGRESS']}"] += float(
-            row['AMOUNT'])
+        if 0 < float(row['OPERATION_PROGRESS']) < 100:
+            wip_ca_dict[row['#ROUTE_PHASE']][
+                f"{row['OPERATION_ID']}|100.0"] += float(row['AMOUNT']) * float(row['OPERATION_PROGRESS'])
+            wip_ca_dict[row['#ROUTE_PHASE']][
+                f"{row['OPERATION_ID']}|0.0"] += float(row['AMOUNT']) * (1 - float(row['OPERATION_PROGRESS']))
+        else:
+            wip_ca_dict[row['#ROUTE_PHASE']][f"{row['OPERATION_ID']}|{row['OPERATION_PROGRESS']}"] += float(
+                row['AMOUNT'])
 
     plan = return_plan191(server, args.material)
     dict2csv(plan, 'plan191.csv')
@@ -143,6 +149,7 @@ def main():
                 for operation, amount in wip_ca_dict[route_phase].items():
                     amount_to_take = min(need_amount, amount)
                     need_amount -= amount_to_take
+                    operation_progress = float(operation.split('|')[1])
                     if amount_to_take > 0:
                         print("Взяли", operation, amount_to_take)
                         wip_ca_dict[route_phase][operation] -= amount_to_take
@@ -152,7 +159,7 @@ def main():
                             'CODE': child,
                             'AMOUNT': amount_to_take,
                             'OPERATION_ID': operation.split('|')[0],
-                            'OPERATION_PROGRESS': float(operation.split('|')[1]),
+                            'OPERATION_PROGRESS': operation_progress,
                             '#PARENT_CODE': row['CODE']
                         })
                 print("Не хватило", need_amount)
