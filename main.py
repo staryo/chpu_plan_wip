@@ -132,28 +132,15 @@ def main():
                 'DATE_TO': row['DATE_TO'],
                 'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
             })
-            for child in specifications[entity]:
-                if '-' in entity:
-                    route_phase = f"{entity}_Z{entity[13]}01"
-                else:
-                    route_phase = f"{entity}_Z{child[13]}01"
-                need_amount = how_many * specifications[entity][child]
-                wip[child] -= need_amount
 
-                if route_phase not in wip_ca_dict:
-                    # print("Не нашлось", route_phase)
-                    new_wip.append({
-                        'ORDER': order_name,
-                        'BATCH_ID': f"{order_name}_{child}",
-                        'CODE': child,
-                        'AMOUNT': need_amount,
-                        'OPERATION_ID': '',
-                        'OPERATION_PROGRESS': 100,
-                        '#PARENT_CODE': row['CODE']
-                    })
-                    continue
+            if '-' in entity:
+                route_phase = f"{entity}_Z{entity[13]}01"
+            else:
+                route_phase = f"{entity}_Z{specifications[entity][0][13]}01"
 
-                print("Нашлось", route_phase)
+            need_amount = how_many
+            if route_phase in wip_ca_dict:
+                print("Нашли", route_phase)
                 for operation, amount in wip_ca_dict[route_phase].items():
                     amount_to_take = min(need_amount, amount)
                     need_amount -= amount_to_take
@@ -170,8 +157,12 @@ def main():
                             'OPERATION_PROGRESS': operation_progress,
                             '#PARENT_CODE': row['CODE']
                         })
+
                 print("Не хватило", need_amount)
                 print()
+
+            for child in specifications[entity]:
+                wip[child] -= how_many * specifications[entity][child]
                 if need_amount > 0:
                     new_wip.append({
                         'ORDER': order_name,
