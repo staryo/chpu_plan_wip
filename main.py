@@ -18,6 +18,7 @@ from utils.date_to_week import date_to_week
 from utils.listofdicts_to_csv import dict2csv
 from wip import return_wip
 
+from datetime import date, datetime, timedelta
 
 def main():
     parser = ArgumentParser(
@@ -51,7 +52,14 @@ def main():
         level=args.debug and DEBUG or INFO,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-    priority = get_priority(config['input'])
+    b = datetime.now() + timedelta(days=8)
+    print(b)
+
+    a = config['priority']
+    if a == True:
+        priority = get_priority(config['input'])
+    else:
+        priority = ['ф']
 
     with open(config['wipca'], 'r', encoding='utf-8') as input_file:
         wipca = list(csv.DictReader(
@@ -124,10 +132,14 @@ def main():
                         '%Y-%m-%d %H:%M'
                     ) - timedelta(days=21)
             ).strftime('%Y-%m-%d 07:00')
-            if row['CODE'] in priority:
-                entity_priority = 1
+            b = datetime.now() + timedelta(days=8)
+            if datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') < b:
+                if row['CODE'] in priority:
+                    entity_priority = 1
+                else:
+                    entity_priority = 2
             else:
-                entity_priority = 2
+                entity_priority = 3
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
@@ -218,10 +230,14 @@ def main():
                         '%Y-%m-%d %H:%M'
                     ) + timedelta(days=config['rules']['days-shift'])
             ).strftime('%Y-%m-%d 07:00')
-            if row['CODE'] in priority:
-                entity_priority = 1
+            b = datetime.now() + timedelta(days=8)
+            if datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') < b:
+                if row['CODE'] in priority:
+                    entity_priority = 1
+                else:
+                    entity_priority = 2
             else:
-                entity_priority = 2
+                entity_priority = 3
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
