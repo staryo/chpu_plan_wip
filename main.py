@@ -13,6 +13,7 @@ import yaml
 
 from get_spec import return_specifications, get_entities
 from plan191 import return_plan191
+from utils.Raport_to_priority import get_priority
 from utils.date_to_week import date_to_week
 from utils.listofdicts_to_csv import dict2csv
 from wip import return_wip
@@ -50,6 +51,8 @@ def main():
         level=args.debug and DEBUG or INFO,
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    priority = get_priority(config['input'])
+
     with open(config['wipca'], 'r', encoding='utf-8') as input_file:
         wipca = list(csv.DictReader(
             input_file
@@ -121,6 +124,10 @@ def main():
                         '%Y-%m-%d %H:%M'
                     ) - timedelta(days=21)
             ).strftime('%Y-%m-%d 07:00')
+            if row['CODE'] in priority:
+                entity_priority = 1
+            else:
+                entity_priority = 2
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
@@ -134,7 +141,7 @@ def main():
                     )
                 ).strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
+                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_{row['DATE_TO']}"
             })
 
             route_phase = None
@@ -211,14 +218,17 @@ def main():
                         '%Y-%m-%d %H:%M'
                     ) + timedelta(days=config['rules']['days-shift'])
             ).strftime('%Y-%m-%d 07:00')
-
+            if row['CODE'] in priority:
+                entity_priority = 1
+            else:
+                entity_priority = 2
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': float(row['AMOUNT']) - how_many,
                 'DATE_FROM': date_to_with_shift,
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}"
+                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_{row['DATE_TO']}"
             })
             for child in specifications[entity]:
                 new_wip.append({
