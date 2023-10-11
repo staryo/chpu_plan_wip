@@ -121,6 +121,17 @@ def main():
                 math.floor(wip[child] / specifications[entity][child]),
                 how_many
             )
+
+        if datetime.strptime(
+                row['DATE_TO'],
+                '%Y-%m-%d %H:%M'
+        ) >= datetime.now() + timedelta(days=8):
+            entity_priority = 3
+        elif row['CODE'] in priority:
+            entity_priority = 1
+        else:
+            entity_priority = 2
+
         if how_many > 0:
             ok_priority = 1
             order_name = (f"[{date_to_week(row['ORDER'])}]"
@@ -134,14 +145,7 @@ def main():
                         '%Y-%m-%d %H:%M'
                     ) - timedelta(days=21)
             ).strftime('%Y-%m-%d 07:00')
-            b = datetime.now() + timedelta(days=8)
-            if datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') < b:
-                if row['CODE'] in priority:
-                    entity_priority = 1
-                else:
-                    entity_priority = 2
-            else:
-                entity_priority = 3
+
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
@@ -155,7 +159,8 @@ def main():
                     )
                 ).strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_{row['DATE_TO']}_{ok_priority}"
+                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_"
+                            f"{row['DATE_TO']}_{ok_priority}"
             })
 
             route_phase = None
@@ -234,30 +239,25 @@ def main():
                         '%Y-%m-%d %H:%M'
                     ) + timedelta(days=config['rules']['days-shift'])
             ).strftime('%Y-%m-%d 07:00')
-            b = datetime.now() + timedelta(days=8)
-            if datetime.strptime(row['DATE_TO'], '%Y-%m-%d %H:%M') < b:
-                if row['CODE'] in priority:
-                    entity_priority = 1
-                else:
-                    entity_priority = 2
-            else:
-                entity_priority = 3
+
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': float(row['AMOUNT']) - how_many,
                 'DATE_FROM': date_to_with_shift,
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_{row['DATE_TO']}_{ok_priority}"
+                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_"
+                            f"{row['DATE_TO']}_{ok_priority}"
             })
             for child in specifications[entity]:
                 new_wip.append({
                     'ORDER': order_name,
                     'BATCH_ID': f"{order_name}_{child}",
                     'CODE': child,
-                    'AMOUNT': round((
-                                            float(row['AMOUNT']) - how_many
-                                    ) * specifications[entity][child], 4),
+                    'AMOUNT': round(
+                        (float(row['AMOUNT']) - how_many)
+                        * specifications[entity][child], 4
+                    ),
                     'OPERATION_ID': '',
                     'OPERATION_PROGRESS': 100,
                     '#PARENT_CODE': row['CODE']
