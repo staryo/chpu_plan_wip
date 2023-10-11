@@ -20,6 +20,7 @@ from wip import return_wip
 
 from datetime import date, datetime, timedelta
 
+
 def main():
     parser = ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -55,8 +56,7 @@ def main():
     b = datetime.now() + timedelta(days=8)
     print(b)
 
-    a = config['priority']
-    if a == True:
+    if config['priority']:
         priority = get_priority(config['input'])
     else:
         priority = ['ф']
