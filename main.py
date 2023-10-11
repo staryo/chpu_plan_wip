@@ -122,9 +122,11 @@ def main():
                 how_many
             )
         if how_many > 0:
+            ok_priority = 1
             order_name = (f"[{date_to_week(row['ORDER'])}]"
                           f"{entities[row['CODE']]}_OK")
             if how_many < float(row['AMOUNT']):
+                ok_priority = 2
                 order_name += '_D'
             date_to_with_shift = (
                     datetime.strptime(
@@ -153,7 +155,7 @@ def main():
                     )
                 ).strftime('%Y-%m-%d 07:00'),
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_{row['DATE_TO']}"
+                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_{row['DATE_TO']}_{ok_priority}"
             })
 
             route_phase = None
@@ -221,8 +223,10 @@ def main():
         if float(row['AMOUNT']) - how_many > 0:
             order_name = (f"[{date_to_week(row['ORDER'])}]"
                           f"{entities[row['CODE']]}_NOK")
+            ok_priority = 3
             if how_many > 0:
                 order_name += '_D'
+                ok_priority = 4
 
             date_to_with_shift = (
                     datetime.strptime(
@@ -244,7 +248,7 @@ def main():
                 'AMOUNT': float(row['AMOUNT']) - how_many,
                 'DATE_FROM': date_to_with_shift,
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_{row['DATE_TO']}"
+                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_{row['DATE_TO']}_{ok_priority}"
             })
             for child in specifications[entity]:
                 new_wip.append({
