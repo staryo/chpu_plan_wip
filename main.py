@@ -139,28 +139,25 @@ def main():
             if how_many < float(row['AMOUNT']):
                 ok_priority = 2
                 order_name += '_D'
+            if entity_priority == 1:
+                order_name += '_B'
             date_to_with_shift = (
+                max(
                     datetime.strptime(
-                        row['DATE_TO'],
-                        '%Y-%m-%d %H:%M'
-                    ) - timedelta(days=21)
+                        row['DATE_TO'], '%Y-%m-%d %H:%M'
+                    ) - timedelta(days=21),
+                    datetime.now()
+                )
             ).strftime('%Y-%m-%d 07:00')
 
             new_plan.append({
                 'ORDER': order_name,
                 'CODE': row['CODE'],
                 'AMOUNT': how_many,
-                'DATE_FROM': (
-                    max(
-                        datetime.strptime(
-                            row['DATE_TO'], '%Y-%m-%d %H:%M'
-                        ) - timedelta(days=21),
-                        datetime.now()
-                    )
-                ).strftime('%Y-%m-%d 07:00'),
+                'DATE_FROM': date_to_with_shift,
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_"
-                            f"{row['DATE_TO']}_{ok_priority}"
+                'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}_"
+                            f"{entity_priority}_{ok_priority}"
             })
 
             route_phase = None
@@ -228,17 +225,16 @@ def main():
         if float(row['AMOUNT']) - how_many > 0:
             order_name = (f"[{date_to_week(row['ORDER'])}]"
                           f"{entities[row['CODE']]}_NOK")
-            ok_priority = 3
+            ok_priority = 4
             if how_many > 0:
                 order_name += '_D'
-                ok_priority = 4
+                ok_priority = 3
+            if entity_priority == 1:
+                order_name += '_B'
 
-            date_to_with_shift = (
-                    datetime.strptime(
-                        row['DATE_TO'],
-                        '%Y-%m-%d %H:%M'
-                    ) + timedelta(days=config['rules']['days-shift'])
-            ).strftime('%Y-%m-%d 07:00')
+            date_to_with_shift = (datetime.now() + timedelta(
+                days=config['rules']['days-shift']
+            )).strftime('%Y-%m-%d 07:00')
 
             new_plan.append({
                 'ORDER': order_name,
@@ -246,8 +242,8 @@ def main():
                 'AMOUNT': float(row['AMOUNT']) - how_many,
                 'DATE_FROM': date_to_with_shift,
                 'DATE_TO': row['DATE_TO'],
-                'PRIORITY': f"{entity_priority}_{date_to_with_shift}_"
-                            f"{row['DATE_TO']}_{ok_priority}"
+                'PRIORITY': f"{date_to_with_shift}_{row['DATE_TO']}_"
+                            f"{entity_priority}_{ok_priority}"
             })
             for child in specifications[entity]:
                 new_wip.append({
